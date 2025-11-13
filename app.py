@@ -496,8 +496,19 @@ def generate_pdf_report(analysis_data: list, summary: dict, model_info: dict = N
     buffer.seek(0)
     return buffer
 
+def get_docx_color(category: str) -> tuple:
+    """Get RGB color tuple for DOCX (R, G, B values 0-255)"""
+    color_map = {
+        'FALSCH': (220, 53, 69),        # Red
+        'DELEGITIMIERUNG': (253, 126, 20),  # Orange  
+        'VERZERRUNG': (255, 193, 7),    # Yellow
+        'FRAME': (40, 167, 69),         # Green
+        'WAHR': (0, 123, 255)           # Blue
+    }
+    return color_map.get(category, (108, 117, 125))  # Default grey
+
 def generate_docx_report(analysis_data: list, summary: dict, model_info: dict = None) -> BytesIO:
-    """Generate DOCX report"""
+    """Generate DOCX report with colors"""
     doc = Document()
     
     doc.add_heading('Vollständige Auswertung', 0)
@@ -510,14 +521,33 @@ def generate_docx_report(analysis_data: list, summary: dict, model_info: dict = 
     doc.add_heading('Quantifizierung', 1)
     doc.add_paragraph(f"Anzahl Aussagen gesamt: {total}")
     
+    # Add colored category counts
     counts = summary['category_counts']
     for cat in ['FALSCH', 'DELEGITIMIERUNG', 'VERZERRUNG', 'FRAME', 'WAHR']:
         count = counts.get(cat, 0)
         percentage = (count / total * 100) if total > 0 else 0
-        doc.add_paragraph(f"■ {cat}: {count} ({percentage:.0f} %)")
+        
+        # Create paragraph with colored bullet
+        p = doc.add_paragraph()
+        
+        # Add colored bullet point
+        bullet_run = p.add_run("■ ")
+        r, g, b = get_docx_color(cat)
+        bullet_run.font.color.rgb = RGBColor(r, g, b)
+        bullet_run.font.size = Pt(12)
+        
+        # Add category text
+        text_run = p.add_run(f"{cat}: {count} ({percentage:.0f} %)")
+        text_run.font.size = Pt(11)
     
     doc.add_heading('Scoring', 1)
-    doc.add_paragraph(f"Desinfo-Score: {summary['desinfo_score']}")
+    
+    # Score with colored background effect
+    score_p = doc.add_paragraph()
+    score_run = score_p.add_run(f"Desinfo-Score: {summary['desinfo_score']}")
+    score_run.bold = True
+    score_run.font.size = Pt(12)
+    
     doc.add_paragraph(f"{summary['grade']}: {summary['grade_label']}")
     doc.add_paragraph(summary['grade_description'])
     
@@ -535,16 +565,36 @@ def generate_docx_report(analysis_data: list, summary: dict, model_info: dict = 
         if not cat_items:
             continue
         
-        doc.add_heading(f"{category} ({len(cat_items)})", 2)
-        p = doc.add_paragraph(CATEGORY_DESCRIPTIONS[category])
-        p.italic = True
+        # Add colored category heading
+        heading = doc.add_heading(level=2)
+        heading_run = heading.add_run(f"{category} ({len(cat_items)})")
+        r, g, b = get_docx_color(category)
+        heading_run.font.color.rgb = RGBColor(r, g, b)
         
+        # Category description
+        desc_p = doc.add_paragraph(CATEGORY_DESCRIPTIONS[category])
+        desc_p.italic = True
+        
+        # Statements with colored symbols
         for idx, item in enumerate(cat_items, 1):
             symbol = '✓' if category == 'WAHR' else '■'
-            p = doc.add_paragraph()
-            p.add_run(f'{idx}. {symbol} ').bold = True
-            p.add_run(f'"{item["aussage"]}"').bold = True
-            doc.add_paragraph(f"– {item['begründung']}")
+            
+            # Statement paragraph
+            stmt_p = doc.add_paragraph()
+            
+            # Add colored symbol and number
+            symbol_run = stmt_p.add_run(f'{idx}. {symbol} ')
+            symbol_run.bold = True
+            r, g, b = get_docx_color(category)
+            symbol_run.font.color.rgb = RGBColor(r, g, b)
+            
+            # Add statement text
+            stmt_run = stmt_p.add_run(f'"{item["aussage"]}"')
+            stmt_run.bold = True
+            
+            # Add reasoning
+            reason_p = doc.add_paragraph(f"– {item['begründung']}")
+            reason_p.style.font.size = Pt(10)
     
     buffer = BytesIO()
     doc.save(buffer)
