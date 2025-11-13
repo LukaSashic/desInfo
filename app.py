@@ -8,7 +8,7 @@ from datetime import datetime
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import cm
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, PageBreak, Table, TableStyle, Image
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, PageBreak, Table, TableStyle
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_CENTER, TA_JUSTIFY, TA_LEFT
 
@@ -26,7 +26,7 @@ except:
     API_BASE_URL = "http://217.154.156.197:8003"
 
 MODELS_ENDPOINT = f"{API_BASE_URL}/desInfo/models"
-ANALYZE_ENDPOINT = f"{API_BASE_URL}/desInfo/generateReport"  # KORRIGIERT!
+ANALYZE_ENDPOINT = f"{API_BASE_URL}/desInfo/generateReport"
 
 LOGO_URL = "https://uzimkjbynnadffyvsohi.supabase.co/storage/v1/object/public/bilder/di_logo_300.png"
 
@@ -67,7 +67,7 @@ st.set_page_config(
 )
 
 # ============================================
-# CUSTOM CSS - FIXED VERSION
+# CUSTOM CSS - Democracy Intelligence Colors
 # ============================================
 st.markdown("""
 <style>
@@ -79,7 +79,7 @@ st.markdown("""
     
     /* Sidebar - READABLE WHITE TEXT */
     [data-testid="stSidebar"] {
-        background: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
+        background: linear-gradient(180deg, #2c5f7d 0%, #1a3a4d 100%);
         padding: 2rem 1rem;
     }
     
@@ -121,14 +121,15 @@ st.markdown("""
         border-color: rgba(255, 255, 255, 0.3) !important;
     }
     
-    /* Main Container */
+    /* Main Container - Democracy Intelligence Colors */
     .main {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: linear-gradient(135deg, #2c5f7d 0%, #1a3a4d 100%);
+        padding: 2rem 1rem;
     }
     
     .block-container {
         max-width: 1400px;
-        padding: 2rem 1rem;
+        padding: 0;
     }
     
     /* Logo */
@@ -153,19 +154,44 @@ st.markdown("""
     }
     
     .subtitle {
-        font-size: 1.5rem;
-        color: #ffd93d;
+        font-size: 1.3rem;
+        color: white;
         text-align: center;
-        font-weight: 600;
+        font-weight: 400;
         margin-bottom: 2rem;
+        opacity: 0.95;
     }
     
-    /* White Content Box */
-    .content-box {
+    /* Input Section - Transparent Background */
+    .input-section {
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 15px;
+        padding: 2rem;
+        margin: 2rem 0;
+        backdrop-filter: blur(10px);
+    }
+    
+    .input-title {
+        font-size: 1.8rem;
+        font-weight: 700;
+        color: white;
+        margin-bottom: 1rem;
+        text-align: center;
+    }
+    
+    .input-description {
+        color: rgba(255, 255, 255, 0.9);
+        text-align: center;
+        margin-bottom: 1.5rem;
+        font-size: 1.05rem;
+    }
+    
+    /* Results Container - White Background */
+    .results-container {
         background: white;
         border-radius: 20px;
         padding: 2.5rem;
-        margin: 1.5rem 0;
+        margin: 2rem 0;
         box-shadow: 0 10px 40px rgba(0,0,0,0.3);
     }
     
@@ -178,10 +204,10 @@ st.markdown("""
         text-align: center;
     }
     
-    /* Buttons */
+    /* Buttons - Democracy Intelligence Pink */
     .stButton>button {
-        background: linear-gradient(135deg, #ffd93d 0%, #ffb800 100%);
-        color: #1a1a1a;
+        background: linear-gradient(135deg, #e91e8c 0%, #c21673 100%);
+        color: white;
         border: none;
         padding: 0.75rem 2rem;
         font-size: 1.1rem;
@@ -193,32 +219,44 @@ st.markdown("""
     
     .stButton>button:hover {
         transform: translateY(-2px);
-        box-shadow: 0 6px 20px rgba(255, 217, 61, 0.4);
+        box-shadow: 0 6px 20px rgba(233, 30, 140, 0.4);
+        background: linear-gradient(135deg, #ff2a9c 0%, #e91e8c 100%);
     }
     
     .stButton>button:disabled {
-        background: #cccccc;
-        color: #666666;
+        background: rgba(255, 255, 255, 0.2);
+        color: rgba(255, 255, 255, 0.5);
         cursor: not-allowed;
     }
     
     /* Text Area */
     .stTextArea textarea {
-        border: 2px solid #667eea;
+        border: 2px solid rgba(255, 255, 255, 0.3);
         border-radius: 15px;
         font-size: 1rem;
         padding: 1rem;
+        background: rgba(255, 255, 255, 0.1);
+        color: white;
+    }
+    
+    .stTextArea textarea::placeholder {
+        color: rgba(255, 255, 255, 0.5);
+    }
+    
+    .stTextArea label {
+        color: white !important;
+        font-weight: 600 !important;
     }
     
     /* Score Box */
     .score-box {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: linear-gradient(135deg, #2c5f7d 0%, #1a3a4d 100%);
         border-radius: 20px;
         padding: 3rem 2rem;
         text-align: center;
         color: white;
         margin: 2rem 0;
-        box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+        box-shadow: 0 10px 30px rgba(44, 95, 125, 0.4);
     }
     
     .score-value {
@@ -231,7 +269,7 @@ st.markdown("""
         font-size: 2.5rem;
         font-weight: 700;
         margin: 1rem 0;
-        color: #ffd93d;
+        color: #e91e8c;
     }
     
     .score-label {
@@ -312,7 +350,7 @@ st.markdown("""
         color: #1a1a1a;
         margin: 2rem 0 1rem 0;
         padding-bottom: 0.5rem;
-        border-bottom: 3px solid #667eea;
+        border-bottom: 3px solid #2c5f7d;
     }
     
     .category-description {
@@ -348,7 +386,7 @@ def fetch_models():
     return []
 
 def parse_statements(text: str) -> list:
-    """Parse statements from text - supports | separator or newlines"""
+    """Parse statements from text"""
     if '|' in text:
         statements = [s.strip() for s in text.split('|') if s.strip()]
     else:
@@ -356,7 +394,7 @@ def parse_statements(text: str) -> list:
     return statements
 
 def call_api(statements: list, model_id: int) -> dict:
-    """Call DESINFO API with correct endpoint"""
+    """Call DESINFO API"""
     text_param = "|".join(statements)
     params = {"modelID": model_id, "text": text_param}
     
@@ -414,7 +452,7 @@ def get_category_color(category: str) -> tuple:
     return color_map.get(category, ('#6c757d', colors.grey))
 
 def generate_pdf_report(analysis_data: list, summary: dict, model_info: dict = None) -> BytesIO:
-    """Generate PDF report matching example format"""
+    """Generate PDF report - NO LOGO, exact format as example"""
     buffer = BytesIO()
     doc = SimpleDocTemplate(
         buffer,
@@ -465,19 +503,7 @@ def generate_pdf_report(analysis_data: list, summary: dict, model_info: dict = N
         fontName='Helvetica-Oblique'
     )
     
-    # Add Logo if available
-    try:
-        logo_response = requests.get(LOGO_URL, timeout=5)
-        if logo_response.ok:
-            logo_buffer = BytesIO(logo_response.content)
-            logo = Image(logo_buffer, width=4*cm, height=4*cm)
-            logo.hAlign = 'LEFT'
-            elements.append(logo)
-            elements.append(Spacer(1, 0.5*cm))
-    except:
-        pass
-    
-    # Title
+    # NO LOGO - Title only
     elements.append(Paragraph("Vollständige Auswertung", title_style))
     elements.append(Spacer(1, 0.3*cm))
     
@@ -633,7 +659,7 @@ if 'input_text' not in st.session_state:
     st.session_state.input_text = ""
 
 # ============================================
-# SIDEBAR - WITH READABLE WHITE TEXT
+# SIDEBAR - READABLE WHITE TEXT
 # ============================================
 with st.sidebar:
     st.markdown("# ⚙️ Einstellungen")
@@ -685,7 +711,7 @@ if not valid_models:
     st.stop()
 
 # Logo
-st.markdown(f'<div class="logo-container"><img src="{LOGO_URL}" alt="Democracy Intelligence Logo"></div>', unsafe_allow_html=True)
+st.markdown(f'<div class="logo-container"><img src="{LOGO_URL}" alt="Democracy Intelligence"></div>', unsafe_allow_html=True)
 
 # Header
 st.markdown('<div class="main-header">DESINFO</div>', unsafe_allow_html=True)
@@ -693,25 +719,24 @@ st.markdown('<div class="subtitle">Demokratie-Intelligenz für politische Kommun
 
 # Main Content
 if st.session_state.analysis_data is None:
-    # INPUT MODE
-    st.markdown('<div class="content-box">', unsafe_allow_html=True)
+    # INPUT MODE - NO WHITE BOX
+    st.markdown('<div class="input-section">', unsafe_allow_html=True)
+    st.markdown('<div class="input-title">📝 Analyse starten</div>', unsafe_allow_html=True)
+    st.markdown('<div class="input-description">Geben Sie politische Aussagen ein (eine pro Zeile oder mit | getrennt)</div>', unsafe_allow_html=True)
     
-    st.markdown('<div class="section-title">📝 Analyse starten</div>', unsafe_allow_html=True)
-    st.markdown('<p style="color: #666; text-align: center; margin-bottom: 1.5rem;">Geben Sie politische Aussagen ein (eine pro Zeile oder mit | getrennt)</p>', unsafe_allow_html=True)
-    
-    # Form with always-visible button (FIX #2)
+    # Form with always-visible button
     with st.form(key="analysis_form"):
         input_text = st.text_area(
             "Text zur Analyse:",
             height=350,
-            placeholder="Beispiel:\nDeutschland zerstört Demokratie in Serbien\nDie Regierung plant den Dritten Weltkrieg",
             value=st.session_state.input_text,
-            help="Geben Sie hier politische Aussagen ein, die Sie analysieren möchten."
+            placeholder="",  # EMPTY placeholder
+            help="Geben Sie hier politische Aussagen ein."
         )
         
         st.session_state.input_text = input_text
         
-        # Button is ALWAYS visible (FIX #2)
+        # Button ALWAYS visible
         col1, col2, col3 = st.columns([1, 2, 1])
         with col2:
             submit_button = st.form_submit_button(
@@ -720,7 +745,7 @@ if st.session_state.analysis_data is None:
                 type="primary"
             )
     
-    # Handle form submission
+    # Handle submission
     if submit_button:
         if not input_text or len(input_text.strip()) < 10:
             st.warning("⚠️ Bitte geben Sie mindestens 10 Zeichen Text ein.")
@@ -742,14 +767,13 @@ if st.session_state.analysis_data is None:
     
     # Preview
     if input_text:
-        st.markdown("---")
         statements = parse_statements(input_text)
-        st.info(f"📊 **{len(statements)} Aussagen** werden analysiert")
+        st.markdown(f'<div style="color: white; text-align: center; margin-top: 1rem;">📊 <strong>{len(statements)} Aussagen</strong> werden analysiert</div>', unsafe_allow_html=True)
     
     st.markdown('</div>', unsafe_allow_html=True)
 
 else:
-    # RESULTS MODE - REPORT STYLE (FIX #3)
+    # RESULTS MODE - WHITE BACKGROUND
     analysis_data = st.session_state.analysis_data
     summary = st.session_state.summary
     model_info = st.session_state.selected_model
@@ -763,8 +787,10 @@ else:
     </div>
     """, unsafe_allow_html=True)
     
+    # Results in white container
+    st.markdown('<div class="results-container">', unsafe_allow_html=True)
+    
     # Quantification
-    st.markdown('<div class="content-box">', unsafe_allow_html=True)
     st.markdown('<div class="section-title">📊 Quantifizierung</div>', unsafe_allow_html=True)
     
     cols = st.columns(5)
@@ -784,10 +810,9 @@ else:
             </div>
             """, unsafe_allow_html=True)
     
-    st.markdown('</div>', unsafe_allow_html=True)
+    st.markdown("<br><br>", unsafe_allow_html=True)
     
-    # Detailed Results - REPORT STYLE (FIX #3)
-    st.markdown('<div class="content-box">', unsafe_allow_html=True)
+    # Detailed Results
     st.markdown('<div class="section-title">📋 Detaillierte Ergebnisse</div>', unsafe_allow_html=True)
     
     for category in categories:
@@ -813,10 +838,9 @@ else:
             </div>
             """, unsafe_allow_html=True)
     
-    st.markdown('</div>', unsafe_allow_html=True)
+    st.markdown("<br><br>", unsafe_allow_html=True)
     
     # Downloads
-    st.markdown('<div class="content-box">', unsafe_allow_html=True)
     st.markdown('<div class="section-title">📥 Report Download</div>', unsafe_allow_html=True)
     
     col1, col2 = st.columns(2)
@@ -852,8 +876,8 @@ st.markdown("---")
 st.markdown(f"""
 <div style="text-align: center; color: white; padding: 2rem 0;">
     <p style="font-size: 1.2rem; font-weight: 600;">
-        Powered by <a href="https://www.democracy-intelligence.de" target="_blank" style="color: #ffd93d; text-decoration: none;">Democracy Intelligence</a>
+        Powered by <a href="https://www.democracy-intelligence.de" target="_blank" style="color: #e91e8c; text-decoration: none;">Democracy Intelligence</a>
     </p>
-    <p style="font-size: 0.9rem; opacity: 0.8;">DESINFO v2.6 Final - Alle Fixes implementiert</p>
+    <p style="font-size: 0.9rem; opacity: 0.8;">DESINFO v3.0 Final</p>
 </div>
 """, unsafe_allow_html=True)
