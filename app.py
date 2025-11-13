@@ -67,7 +67,7 @@ st.set_page_config(
 )
 
 # ============================================
-# CUSTOM CSS - Democracy Intelligence Colors
+# CUSTOM CSS - FIXED FOR MAC/WINDOWS COMPATIBILITY
 # ============================================
 st.markdown("""
 <style>
@@ -186,6 +186,41 @@ st.markdown("""
         font-size: 1.05rem;
     }
     
+    /* Text Area - FIXED FOR MAC/WINDOWS */
+    .stTextArea textarea,
+    [data-testid="stTextArea"] textarea,
+    div[data-baseweb="textarea"] textarea {
+        border: 2px solid rgba(255, 255, 255, 0.3) !important;
+        border-radius: 15px !important;
+        font-size: 1rem !important;
+        padding: 1rem !important;
+        background: rgba(255, 255, 255, 0.1) !important;
+        color: white !important;
+    }
+    
+    /* Focus state */
+    .stTextArea textarea:focus,
+    [data-testid="stTextArea"] textarea:focus,
+    div[data-baseweb="textarea"] textarea:focus {
+        background: rgba(255, 255, 255, 0.15) !important;
+        color: white !important;
+        border-color: rgba(255, 255, 255, 0.5) !important;
+        outline: none !important;
+    }
+    
+    /* Placeholder */
+    .stTextArea textarea::placeholder,
+    [data-testid="stTextArea"] textarea::placeholder {
+        color: rgba(255, 255, 255, 0.5) !important;
+    }
+    
+    /* Label */
+    .stTextArea label,
+    [data-testid="stTextArea"] label {
+        color: white !important;
+        font-weight: 600 !important;
+    }
+    
     /* Results Container - White Background */
     .results-container {
         background: white;
@@ -227,25 +262,6 @@ st.markdown("""
         background: rgba(255, 255, 255, 0.2);
         color: rgba(255, 255, 255, 0.5);
         cursor: not-allowed;
-    }
-    
-    /* Text Area */
-    .stTextArea textarea {
-        border: 2px solid rgba(255, 255, 255, 0.3);
-        border-radius: 15px;
-        font-size: 1rem;
-        padding: 1rem;
-        background: rgba(255, 255, 255, 0.1);
-        color: white;
-    }
-    
-    .stTextArea textarea::placeholder {
-        color: rgba(255, 255, 255, 0.5);
-    }
-    
-    .stTextArea label {
-        color: white !important;
-        font-weight: 600 !important;
     }
     
     /* Score Box */
@@ -452,7 +468,7 @@ def get_category_color(category: str) -> tuple:
     return color_map.get(category, ('#6c757d', colors.grey))
 
 def generate_pdf_report(analysis_data: list, summary: dict, model_info: dict = None) -> BytesIO:
-    """Generate PDF report - NO LOGO, exact format as example"""
+    """Generate PDF report - NO LOGO"""
     buffer = BytesIO()
     doc = SimpleDocTemplate(
         buffer,
@@ -503,7 +519,7 @@ def generate_pdf_report(analysis_data: list, summary: dict, model_info: dict = N
         fontName='Helvetica-Oblique'
     )
     
-    # NO LOGO - Title only
+    # Title
     elements.append(Paragraph("Vollständige Auswertung", title_style))
     elements.append(Spacer(1, 0.3*cm))
     
@@ -647,19 +663,18 @@ def generate_docx_report(analysis_data: list, summary: dict, model_info: dict = 
     return buffer
 
 # ============================================
-# SESSION STATE
+# SESSION STATE - Initialize AFTER models
 # ============================================
 if 'analysis_data' not in st.session_state:
     st.session_state.analysis_data = None
 if 'summary' not in st.session_state:
     st.session_state.summary = None
-if 'selected_model' not in st.session_state:
-    st.session_state.selected_model = None
 if 'input_text' not in st.session_state:
     st.session_state.input_text = ""
+# NOTE: selected_model is NOT initialized here - will be done after loading models
 
 # ============================================
-# SIDEBAR - READABLE WHITE TEXT
+# SIDEBAR - FIXED MODEL SELECTION
 # ============================================
 with st.sidebar:
     st.markdown("# ⚙️ Einstellungen")
@@ -669,12 +684,26 @@ with st.sidebar:
     
     if valid_models:
         st.markdown("### AI Model")
+        
+        # FIXED: Initialize selected_model AFTER models are loaded
+        if 'selected_model' not in st.session_state or st.session_state.selected_model is None:
+            st.session_state.selected_model = valid_models[0]  # Set first model as default
+        
         model_options = {f"{m['modelName']} ({m['provider']})": m for m in valid_models}
+        
+        # Find current selection index
+        current_model = st.session_state.selected_model
+        current_label = f"{current_model['modelName']} ({current_model['provider']})"
+        default_index = list(model_options.keys()).index(current_label) if current_label in model_options else 0
+        
         selected_model_label = st.selectbox(
             "Wähle ein Model:",
             options=list(model_options.keys()),
-            index=0
+            index=default_index,
+            key="model_selector"  # Unique key
         )
+        
+        # Update session state
         st.session_state.selected_model = model_options[selected_model_label]
         
         with st.expander("ℹ️ Model Details"):
@@ -682,6 +711,8 @@ with st.sidebar:
             st.write(f"**ID:** {model['modelID']}")
             st.write(f"**Name:** {model['modelName']}")
             st.write(f"**Provider:** {model['provider']}")
+    else:
+        st.error("⚠️ Keine Models verfügbar")
     
     st.markdown("---")
     
@@ -719,7 +750,7 @@ st.markdown('<div class="subtitle">Demokratie-Intelligenz für politische Kommun
 
 # Main Content
 if st.session_state.analysis_data is None:
-    # INPUT MODE - NO WHITE BOX
+    # INPUT MODE
     st.markdown('<div class="input-section">', unsafe_allow_html=True)
     st.markdown('<div class="input-title">📝 Analyse starten</div>', unsafe_allow_html=True)
     st.markdown('<div class="input-description">Geben Sie politische Aussagen ein (eine pro Zeile oder mit | getrennt)</div>', unsafe_allow_html=True)
@@ -730,7 +761,7 @@ if st.session_state.analysis_data is None:
             "Text zur Analyse:",
             height=350,
             value=st.session_state.input_text,
-            placeholder="",  # EMPTY placeholder
+            placeholder="",
             help="Geben Sie hier politische Aussagen ein."
         )
         
@@ -773,7 +804,7 @@ if st.session_state.analysis_data is None:
     st.markdown('</div>', unsafe_allow_html=True)
 
 else:
-    # RESULTS MODE - WHITE BACKGROUND
+    # RESULTS MODE
     analysis_data = st.session_state.analysis_data
     summary = st.session_state.summary
     model_info = st.session_state.selected_model
@@ -878,6 +909,6 @@ st.markdown(f"""
     <p style="font-size: 1.2rem; font-weight: 600;">
         Powered by <a href="https://www.democracy-intelligence.de" target="_blank" style="color: #e91e8c; text-decoration: none;">Democracy Intelligence</a>
     </p>
-    <p style="font-size: 0.9rem; opacity: 0.8;">DESINFO v3.0 Final</p>
+    <p style="font-size: 0.9rem; opacity: 0.8;">DESINFO v3.0 Final - Mac/Windows Compatible</p>
 </div>
 """, unsafe_allow_html=True)
