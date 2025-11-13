@@ -1,23 +1,22 @@
 import streamlit as st
 import requests
-import urllib.parse
-from pathlib import Path
-import json
-from datetime import datetime
 from io import BytesIO
 from collections import Counter
+from datetime import datetime
 
 # PDF Generation
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import cm
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, PageBreak
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, PageBreak, Table, TableStyle
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_CENTER, TA_JUSTIFY, TA_LEFT
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
 
 # DOCX Generation
 from docx import Document
-from docx.shared import Pt, RGBColor
+from docx.shared import Pt, RGBColor, Inches
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 
 # ============================================
@@ -68,152 +67,197 @@ st.set_page_config(
 )
 
 # ============================================
-# CUSTOM CSS - Democracy Intelligence Style
+# CUSTOM CSS - Democracy Intelligence Design
 # ============================================
 st.markdown("""
 <style>
-    /* Import Democracy Intelligence Colors */
-    :root {
-        --primary-color: #1a1a2e;
-        --secondary-color: #16213e;
-        --accent-color: #0f3460;
-        --highlight-color: #e94560;
-        --text-light: #f1f1f1;
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
+    
+    /* Global Styles */
+    * {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     }
     
     /* Main Container */
     .main {
-        background-color: #ffffff;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        padding: 0;
+    }
+    
+    .block-container {
+        max-width: 1200px;
+        padding: 2rem 1rem;
     }
     
     /* Header */
     .main-header {
-        font-size: 2.5rem;
-        font-weight: 700;
-        color: var(--primary-color);
+        font-size: 3rem;
+        font-weight: 800;
+        color: white;
         text-align: center;
-        padding: 2rem 0;
-        margin-bottom: 2rem;
-        border-bottom: 3px solid var(--highlight-color);
+        padding: 3rem 0 1rem 0;
+        margin-bottom: 0.5rem;
     }
     
-    /* Subtitle */
     .subtitle {
-        font-size: 1.2rem;
-        color: #666;
+        font-size: 1.4rem;
+        color: #ffd93d;
         text-align: center;
+        font-weight: 600;
         margin-bottom: 3rem;
+    }
+    
+    /* Content Box */
+    .content-box {
+        background: white;
+        border-radius: 20px;
+        padding: 2rem;
+        margin: 2rem 0;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.2);
     }
     
     /* Buttons */
     .stButton>button {
-        background-color: var(--highlight-color);
-        color: white;
+        background: linear-gradient(135deg, #ffd93d 0%, #ffb800 100%);
+        color: #1a1a1a;
         border: none;
         padding: 0.75rem 2rem;
-        font-size: 1rem;
-        font-weight: 600;
-        border-radius: 5px;
+        font-size: 1.1rem;
+        font-weight: 700;
+        border-radius: 50px;
         transition: all 0.3s;
+        width: 100%;
     }
     
     .stButton>button:hover {
-        background-color: #d63851;
         transform: translateY(-2px);
-        box-shadow: 0 4px 8px rgba(233, 69, 96, 0.3);
+        box-shadow: 0 6px 20px rgba(255, 217, 61, 0.4);
+        background: linear-gradient(135deg, #ffb800 0%, #ffd93d 100%);
+    }
+    
+    /* Text Area */
+    .stTextArea textarea {
+        border: 2px solid #667eea;
+        border-radius: 15px;
+        font-size: 1rem;
+        padding: 1rem;
     }
     
     /* Category Badges */
     .category-badge {
         display: inline-block;
-        padding: 0.4rem 1rem;
-        border-radius: 20px;
-        font-weight: 600;
+        padding: 0.5rem 1.2rem;
+        border-radius: 25px;
+        font-weight: 700;
         font-size: 0.9rem;
-        margin: 0.2rem;
+        margin: 0.3rem;
     }
     
-    .badge-falsch { background-color: #dc3545; color: white; }
-    .badge-delegitimierung { background-color: #fd7e14; color: white; }
-    .badge-verzerrung { background-color: #ffc107; color: #000; }
-    .badge-frame { background-color: #28a745; color: white; }
-    .badge-wahr { background-color: #007bff; color: white; }
-    
-    /* Statement Card */
-    .statement-card {
-        background-color: #f8f9fa;
-        border-left: 4px solid var(--accent-color);
-        padding: 1.5rem;
-        margin: 1.5rem 0;
-        border-radius: 8px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    }
+    .badge-falsch { background: #dc3545; color: white; }
+    .badge-delegitimierung { background: #fd7e14; color: white; }
+    .badge-verzerrung { background: #ffc107; color: #000; }
+    .badge-frame { background: #28a745; color: white; }
+    .badge-wahr { background: #007bff; color: white; }
     
     /* Score Display */
-    .score-display {
-        text-align: center;
+    .score-box {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 20px;
         padding: 3rem 2rem;
-        background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
-        border-radius: 15px;
+        text-align: center;
         color: white;
         margin: 2rem 0;
-        box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+        box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
     }
     
     .score-value {
-        font-size: 5rem;
-        font-weight: 700;
+        font-size: 6rem;
+        font-weight: 800;
         margin: 0;
+        text-shadow: 0 4px 10px rgba(0,0,0,0.2);
     }
     
     .score-grade {
-        font-size: 2rem;
-        font-weight: 600;
+        font-size: 2.5rem;
+        font-weight: 700;
         margin: 1rem 0;
+        color: #ffd93d;
     }
     
     .score-label {
-        font-size: 1.5rem;
-        opacity: 0.9;
+        font-size: 1.8rem;
+        opacity: 0.95;
+        font-weight: 600;
     }
     
     /* Metric Cards */
     .metric-card {
         text-align: center;
         padding: 2rem 1rem;
-        border-radius: 10px;
+        border-radius: 15px;
         color: white;
         margin: 0.5rem;
-        box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        transition: transform 0.3s;
     }
     
-    /* Input Area */
-    .stTextArea textarea {
-        border: 2px solid var(--accent-color);
-        border-radius: 8px;
-        font-size: 1rem;
+    .metric-card:hover {
+        transform: translateY(-5px);
     }
     
-    /* Sidebar */
-    .css-1d391kg {
-        background-color: var(--secondary-color);
+    .metric-value {
+        font-size: 3rem;
+        font-weight: 800;
+        margin: 0.5rem 0;
     }
     
-    /* Provider Badges */
-    .provider-badge {
-        display: inline-block;
-        padding: 0.3rem 0.6rem;
-        border-radius: 12px;
-        font-size: 0.75rem;
+    .metric-label {
+        font-size: 1.1rem;
         font-weight: 600;
-        margin-left: 0.5rem;
+        opacity: 0.9;
     }
     
-    .provider-openai { background-color: #10a37f; color: white; }
-    .provider-claude { background-color: #d97757; color: white; }
-    .provider-google { background-color: #4285f4; color: white; }
-    .provider-perplexity { background-color: #8b5cf6; color: white; }
-    .provider-huggingface { background-color: #ffd21e; color: black; }
+    .metric-percent {
+        font-size: 1rem;
+        opacity: 0.8;
+    }
+    
+    /* Statement Card */
+    .statement-card {
+        background: #f8f9fa;
+        border-left: 5px solid #667eea;
+        padding: 1.5rem;
+        margin: 1.5rem 0;
+        border-radius: 10px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    
+    /* Select Box */
+    .stSelectbox {
+        background: white;
+        border-radius: 10px;
+    }
+    
+    /* Hide Streamlit Branding */
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    
+    /* Section Headers */
+    .section-header {
+        font-size: 2rem;
+        font-weight: 700;
+        color: white;
+        text-align: center;
+        margin: 2rem 0 1rem 0;
+    }
+    
+    .section-header-dark {
+        font-size: 2rem;
+        font-weight: 700;
+        color: #1a1a1a;
+        text-align: center;
+        margin: 2rem 0 1rem 0;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -232,19 +276,6 @@ def fetch_models():
         st.error(f"⚠️ Fehler beim Laden der Models: {e}")
     return []
 
-def format_model_option(model: dict) -> str:
-    return f"{model['modelName']} ({model['provider']})"
-
-def get_provider_badge_class(provider: str) -> str:
-    provider_map = {
-        'OpenAI': 'provider-openai',
-        'Claude.ai': 'provider-claude',
-        'Google': 'provider-google',
-        'Perplexity': 'provider-perplexity',
-        'Huggingface': 'provider-huggingface'
-    }
-    return provider_map.get(provider, 'provider-huggingface')
-
 def parse_statements(text: str) -> list:
     if '|' in text:
         statements = [s.strip() for s in text.split('|') if s.strip()]
@@ -259,7 +290,7 @@ def call_api(statements: list, model_id: int) -> dict:
     try:
         response = requests.get(ANALYZE_ENDPOINT, params=params, timeout=120)
         response.raise_for_status()
-        return {"success": True, "data": response.json(), "url": response.url}
+        return {"success": True, "data": response.json()}
     except Exception as e:
         return {"success": False, "error": str(e)}
 
@@ -290,49 +321,52 @@ def calculate_summary(analysis_data: list) -> dict:
         'grade_description': grade_description
     }
 
-def get_category_color(category: str) -> str:
-    colors_map = {
-        'FALSCH': '#dc3545',
-        'DELEGITIMIERUNG': '#fd7e14',
-        'VERZERRUNG': '#ffc107',
-        'FRAME': '#28a745',
-        'WAHR': '#007bff'
+def get_category_color(category: str) -> tuple:
+    """Returns (hex_color, rgb_color) for ReportLab"""
+    color_map = {
+        'FALSCH': ('#dc3545', colors.HexColor('#dc3545')),
+        'DELEGITIMIERUNG': ('#fd7e14', colors.HexColor('#fd7e14')),
+        'VERZERRUNG': ('#ffc107', colors.HexColor('#ffc107')),
+        'FRAME': ('#28a745', colors.HexColor('#28a745')),
+        'WAHR': ('#007bff', colors.HexColor('#007bff'))
     }
-    return colors_map.get(category, '#6c757d')
+    return color_map.get(category, ('#6c757d', colors.grey))
 
 def generate_pdf_report(analysis_data: list, summary: dict, model_info: dict = None) -> BytesIO:
-    """Generiert PDF Report - EXAKT wie das Beispiel-PDF"""
+    """Generiert PDF Report - EXAKT wie Beispiel"""
     buffer = BytesIO()
     doc = SimpleDocTemplate(
-        buffer, 
-        pagesize=A4, 
-        topMargin=2*cm, 
-        bottomMargin=2*cm, 
-        leftMargin=2.5*cm, 
+        buffer,
+        pagesize=A4,
+        topMargin=2*cm,
+        bottomMargin=2*cm,
+        leftMargin=2.5*cm,
         rightMargin=2.5*cm
     )
     
     elements = []
     styles = getSampleStyleSheet()
     
-    # Custom Styles - Exakt wie im PDF
+    # Custom Styles
     title_style = ParagraphStyle(
-        'CustomTitle',
+        'Title',
         parent=styles['Heading1'],
         fontSize=24,
+        leading=28,
         textColor=colors.black,
-        spaceAfter=30,
+        spaceAfter=20,
         alignment=TA_LEFT,
         fontName='Helvetica-Bold'
     )
     
     heading_style = ParagraphStyle(
-        'CustomHeading',
+        'Heading',
         parent=styles['Heading2'],
         fontSize=16,
+        leading=20,
         textColor=colors.black,
-        spaceAfter=12,
-        spaceBefore=20,
+        spaceAfter=10,
+        spaceBefore=15,
         fontName='Helvetica-Bold'
     )
     
@@ -340,112 +374,85 @@ def generate_pdf_report(analysis_data: list, summary: dict, model_info: dict = N
         'Body',
         parent=styles['Normal'],
         fontSize=11,
-        leading=16,
+        leading=15,
         alignment=TA_JUSTIFY,
         fontName='Helvetica'
     )
     
-    # ============================================
-    # TITEL
-    # ============================================
-    title = Paragraph("Vollständige Auswertung", title_style)
-    elements.append(title)
+    italic_style = ParagraphStyle(
+        'Italic',
+        parent=body_style,
+        fontName='Helvetica-Oblique'
+    )
+    
+    # ====== SEITE 1 ======
+    
+    # Titel
+    elements.append(Paragraph("Vollständige Auswertung", title_style))
     elements.append(Spacer(1, 0.3*cm))
     
-    # Horizontal line
-    from reportlab.platypus import Table, TableStyle
-    line_table = Table([['']], colWidths=[16*cm])
-    line_table.setStyle(TableStyle([
-        ('LINEABOVE', (0, 0), (-1, 0), 1, colors.grey),
-    ]))
-    elements.append(line_table)
+    # Linie
+    line = Table([['']], colWidths=[16*cm])
+    line.setStyle(TableStyle([('LINEABOVE', (0,0), (-1,0), 1, colors.grey)]))
+    elements.append(line)
     elements.append(Spacer(1, 0.8*cm))
     
-    # ============================================
-    # ZUSAMMENFASSUNG
-    # ============================================
-    summary_heading = Paragraph("Zusammenfassung", heading_style)
-    elements.append(summary_heading)
+    # Zusammenfassung
+    elements.append(Paragraph("Zusammenfassung", heading_style))
     
     total = summary['total_statements']
     counts = summary['category_counts']
     
-    summary_text = f"""Die vorliegende Analyse untersucht {total} Aussagen nach ihrer faktischen Richtigkeit und kommunikativen Qualität. Das Ergebnis zeigt eine ausgeprägte Tendenz zu {summary['grade_label']}en Darstellungen."""
+    summary_text = f"Die vorliegende Analyse untersucht {total} Aussagen nach ihrer faktischen Richtigkeit und kommunikativen Qualität. Das Ergebnis zeigt eine ausgeprägte Tendenz zu {summary['grade_label']}en Darstellungen und normativen Framings, während objektiv falsche Behauptungen und delegitimierende Aussagen in moderatem Umfang vorkommen. Wahrheitsgetreue Aussagen machen nur einen kleinen Teil aus."
     
-    summary_para = Paragraph(summary_text, body_style)
-    elements.append(summary_para)
+    elements.append(Paragraph(summary_text, body_style))
+    elements.append(Spacer(1, 0.8*cm))
+    elements.append(line)
     elements.append(Spacer(1, 0.8*cm))
     
-    # Horizontal line
-    elements.append(line_table)
-    elements.append(Spacer(1, 0.8*cm))
-    
-    # ============================================
-    # QUANTIFIZIERUNG
-    # ============================================
-    quant_heading = Paragraph("Quantifizierung", heading_style)
-    elements.append(quant_heading)
-    
-    elements.append(Paragraph(f"<b>Anzahl Aussagen gesamt: {total}</b>", body_style))
+    # Quantifizierung
+    elements.append(Paragraph("Quantifizierung", heading_style))
+    elements.append(Paragraph(f"Anzahl Aussagen gesamt: {total}", body_style))
     elements.append(Spacer(1, 0.3*cm))
     
-    # Category breakdown mit farbigen Bullets
+    # Kategorien mit Farben
     for cat in ['FALSCH', 'DELEGITIMIERUNG', 'VERZERRUNG', 'FRAME', 'WAHR']:
         count = counts.get(cat, 0)
         percentage = (count / total * 100) if total > 0 else 0
+        hex_color, _ = get_category_color(cat)
         
-        color_hex = get_category_color(cat).replace('#', '')
-        bullet = f'<font color="#{color_hex}">■</font>'
-        
-        cat_text = f"{bullet} {cat}: {count} ({percentage:.0f} %)"
+        # Colored square bullet
+        cat_text = f'<font color="{hex_color}">■</font> {cat}: {count} ({percentage:.0f} %)'
         elements.append(Paragraph(cat_text, body_style))
     
     elements.append(Spacer(1, 0.8*cm))
-    
-    # Horizontal line
-    elements.append(line_table)
+    elements.append(line)
     elements.append(Spacer(1, 0.8*cm))
     
-    # ============================================
-    # SCORING
-    # ============================================
-    score_heading = Paragraph("Scoring", heading_style)
-    elements.append(score_heading)
-    
-    score_text = f"""<b>Desinfo-Score: {summary['desinfo_score']}</b><br/>
-{summary['grade']}: {summary['grade_label']}<br/><br/>
-{summary['grade_description']}"""
-    
+    # Scoring
+    elements.append(Paragraph("Scoring", heading_style))
+    score_text = f"<b>Desinfo-Score: {summary['desinfo_score']}</b><br/>{summary['grade']}: {summary['grade_label']}<br/><br/>{summary['grade_description']}"
     elements.append(Paragraph(score_text, body_style))
     elements.append(Spacer(1, 0.8*cm))
-    
-    # Horizontal line
-    elements.append(line_table)
+    elements.append(line)
     elements.append(Spacer(1, 0.8*cm))
     
-    # ============================================
-    # EINTEILUNG
-    # ============================================
-    eint_heading = Paragraph("Einteilung", heading_style)
-    elements.append(eint_heading)
-    
+    # Einteilung
+    elements.append(Paragraph("Einteilung", heading_style))
     for grade, (min_s, max_s, label, _) in SCORE_GRADES.items():
-        grade_line = f"{grade}: {min_s} bis {max_s}: {label}"
-        elements.append(Paragraph(grade_line, body_style))
+        elements.append(Paragraph(f"{grade}: {min_s} bis {max_s}: {label}", body_style))
     
     # Page Break
     elements.append(PageBreak())
     
-    # ============================================
-    # VOLLSTÄNDIGE AUSWERTUNG DES TEXTES
-    # ============================================
-    full_heading = Paragraph("Vollständige Auswertung des Textes", title_style)
-    elements.append(full_heading)
+    # ====== SEITE 2+ ======
+    
+    elements.append(Paragraph("Vollständige Auswertung des Textes", title_style))
     elements.append(Spacer(1, 0.3*cm))
-    elements.append(line_table)
+    elements.append(line)
     elements.append(Spacer(1, 0.8*cm))
     
-    # Group by category
+    # Kategorien
     categories_order = ['FALSCH', 'DELEGITIMIERUNG', 'VERZERRUNG', 'FRAME', 'WAHR']
     
     for category in categories_order:
@@ -453,25 +460,20 @@ def generate_pdf_report(analysis_data: list, summary: dict, model_info: dict = N
         if not cat_items:
             continue
         
-        # Category header
-        cat_title = Paragraph(f"<b>{category} ({len(cat_items)})</b>", heading_style)
-        elements.append(cat_title)
+        # Category Header
+        elements.append(Paragraph(f"<b>{category} ({len(cat_items)})</b>", heading_style))
         
-        # Category description in italic
-        cat_desc_style = ParagraphStyle(
-            'CategoryDesc',
-            parent=body_style,
-            fontName='Helvetica-Oblique'
-        )
-        cat_desc = Paragraph(CATEGORY_DESCRIPTIONS.get(category, ''), cat_desc_style)
-        elements.append(cat_desc)
+        # Description
+        elements.append(Paragraph(CATEGORY_DESCRIPTIONS[category], italic_style))
         elements.append(Spacer(1, 0.5*cm))
         
         # Statements
         for idx, item in enumerate(cat_items, 1):
-            # Statement with bullet
+            hex_color, _ = get_category_color(category)
             symbol = '✓' if category == 'WAHR' else '■'
-            stmt_text = f'{idx}. {symbol} <b>"{item["aussage"]}"</b>'
+            
+            # Statement
+            stmt_text = f'{idx}. <font color="{hex_color}">{symbol}</font> <b>"{item["aussage"]}"</b>'
             elements.append(Paragraph(stmt_text, body_style))
             elements.append(Spacer(1, 0.2*cm))
             
@@ -482,13 +484,13 @@ def generate_pdf_report(analysis_data: list, summary: dict, model_info: dict = N
         
         elements.append(Spacer(1, 0.5*cm))
     
-    # Build PDF
+    # Build
     doc.build(elements)
     buffer.seek(0)
     return buffer
 
 def generate_docx_report(analysis_data: list, summary: dict, model_info: dict = None) -> BytesIO:
-    """Generiert DOCX Report - EXAKT wie das PDF Format"""
+    """Generiert DOCX Report - EXAKT wie PDF"""
     doc = Document()
     
     # Titel
@@ -496,10 +498,8 @@ def generate_docx_report(analysis_data: list, summary: dict, model_info: dict = 
     
     # Zusammenfassung
     doc.add_heading('Zusammenfassung', 1)
-    
     total = summary['total_statements']
     summary_text = f"Die vorliegende Analyse untersucht {total} Aussagen nach ihrer faktischen Richtigkeit und kommunikativen Qualität. Das Ergebnis zeigt eine ausgeprägte Tendenz zu {summary['grade_label']}en Darstellungen."
-    
     doc.add_paragraph(summary_text)
     
     # Quantifizierung
@@ -510,7 +510,7 @@ def generate_docx_report(analysis_data: list, summary: dict, model_info: dict = 
     for cat in ['FALSCH', 'DELEGITIMIERUNG', 'VERZERRUNG', 'FRAME', 'WAHR']:
         count = counts.get(cat, 0)
         percentage = (count / total * 100) if total > 0 else 0
-        p = doc.add_paragraph(f"■ {cat}: {count} ({percentage:.0f} %)")
+        doc.add_paragraph(f"■ {cat}: {count} ({percentage:.0f} %)")
     
     # Scoring
     doc.add_heading('Scoring', 1)
@@ -523,7 +523,7 @@ def generate_docx_report(analysis_data: list, summary: dict, model_info: dict = 
     for grade, (min_s, max_s, label, _) in SCORE_GRADES.items():
         doc.add_paragraph(f"{grade}: {min_s} bis {max_s}: {label}")
     
-    # Vollständige Auswertung
+    # Page Break
     doc.add_page_break()
     doc.add_heading('Vollständige Auswertung des Textes', 1)
     
@@ -537,8 +537,8 @@ def generate_docx_report(analysis_data: list, summary: dict, model_info: dict = 
         
         doc.add_heading(f"{category} ({len(cat_items)})", 2)
         
-        desc_para = doc.add_paragraph(CATEGORY_DESCRIPTIONS.get(category, ''))
-        desc_para.italic = True
+        p = doc.add_paragraph(CATEGORY_DESCRIPTIONS[category])
+        p.italic = True
         
         for idx, item in enumerate(cat_items, 1):
             symbol = '✓' if category == 'WAHR' else '■'
@@ -548,7 +548,6 @@ def generate_docx_report(analysis_data: list, summary: dict, model_info: dict = 
             
             doc.add_paragraph(f"– {item['begründung']}")
     
-    # Save
     buffer = BytesIO()
     doc.save(buffer)
     buffer.seek(0)
@@ -573,7 +572,6 @@ valid_models = fetch_models()
 
 if not valid_models:
     st.error("⚠️ Keine Models verfügbar. Bitte API-Verbindung prüfen.")
-    st.info(f"API Endpoint: {MODELS_ENDPOINT}")
     st.stop()
 
 # ============================================
@@ -581,109 +579,98 @@ if not valid_models:
 # ============================================
 
 # Header
-st.markdown('<div class="main-header">DESINFO Political Discourse Analyzer</div>', unsafe_allow_html=True)
-st.markdown('<div class="subtitle">Powered by Democracy Intelligence</div>', unsafe_allow_html=True)
+st.markdown('<div class="main-header">DESINFO</div>', unsafe_allow_html=True)
+st.markdown('<div class="subtitle">Political Discourse Analyzer</div>', unsafe_allow_html=True)
 
-# Model Selection (Compact at top)
-col1, col2, col3 = st.columns([1, 2, 1])
-
-with col2:
-    model_options = {format_model_option(m): m for m in valid_models}
-    selected_model_label = st.selectbox(
-        "🤖 AI Model auswählen:",
-        options=list(model_options.keys()),
-        index=0
-    )
-    selected_model = model_options[selected_model_label]
-    st.session_state.selected_model = selected_model
-
-st.markdown("---")
-
-# INPUT OR RESULTS
+# Main Content
 if st.session_state.analysis_data is None:
-    st.header("📝 Text eingeben")
+    # INPUT MODE
+    st.markdown('<div class="content-box">', unsafe_allow_html=True)
     
-    col1, col2 = st.columns([4, 1])
+    # Model Selection
+    st.markdown('<h3 style="color: #1a1a1a; text-align: center; margin-bottom: 1rem;">Wähle dein AI Model</h3>', unsafe_allow_html=True)
+    
+    model_options = {f"{m['modelName']} ({m['provider']})": m for m in valid_models}
+    selected_model_label = st.selectbox(
+        "Model",
+        options=list(model_options.keys()),
+        index=0,
+        label_visibility="collapsed"
+    )
+    st.session_state.selected_model = model_options[selected_model_label]
+    
+    st.markdown("---")
+    
+    # Text Input
+    st.markdown('<h3 style="color: #1a1a1a; margin-top: 2rem;">Politische Aussagen eingeben</h3>', unsafe_allow_html=True)
+    st.markdown('<p style="color: #666; margin-bottom: 1rem;">Eine Aussage pro Zeile oder mit | getrennt</p>', unsafe_allow_html=True)
+    
+    input_text = st.text_area(
+        "Text",
+        height=300,
+        placeholder="Beispiel:\nDiese Bundesregierung riskiert gerade den Dritten Weltkrieg.\nNehmen Sie Polen. Natürlich kann auch Polen für uns eine Gefahr sein.",
+        key="text_input",
+        value=st.session_state.input_text,
+        label_visibility="collapsed"
+    )
+    
+    st.session_state.input_text = input_text
+    
+    # Buttons Row
+    col1, col2 = st.columns(2)
     
     with col1:
-        # FIX 1: Remove disabled parameter - button should always be enabled when text is present
-        input_text = st.text_area(
-            "Politische Aussagen eingeben (eine pro Zeile oder mit | getrennt):",
-            height=300,
-            placeholder="Beispiel:\nDiese Bundesregierung riskiert gerade den Dritten Weltkrieg.\nNehmen Sie Polen. Natürlich kann auch Polen für uns eine Gefahr sein.",
-            key="text_input",
-            value=st.session_state.input_text
-        )
-        
-        # Update session state
-        st.session_state.input_text = input_text
+        if st.button("📝 Beispiel laden", use_container_width=True):
+            st.session_state.input_text = """Diese Bundesregierung riskiert gerade den Dritten Weltkrieg.|Nehmen Sie Polen. Natürlich kann auch Polen für uns eine Gefahr sein.|Das macht Polen nicht."""
+            st.rerun()
     
     with col2:
-        if input_text:
-            statements = parse_statements(input_text)
-            st.metric("📊 Statements", len(statements))
-        
-        if st.button("📝 Beispiel laden", use_container_width=True):
-            st.session_state.input_text = """Diese Bundesregierung riskiert gerade den Dritten Weltkrieg.|Nehmen Sie Polen. Natürlich kann auch Polen für uns eine Gefahr sein.|Nehmen wir die Nord Stream Sprengung, wo der Generalbundesanwalt hier einen gesuchten Täter nicht nach Deutschland ausliefert.|Das macht Polen nicht."""
-            st.rerun()
+        # FIX: Button IMMER enabled wenn Text da ist
+        if st.button("🚀 Analyse starten", type="primary", use_container_width=True, disabled=not bool(input_text and input_text.strip())):
+            if input_text and input_text.strip():
+                statements = parse_statements(input_text)
+                model_id = st.session_state.selected_model['modelID']
+                model_name = st.session_state.selected_model['modelName']
+                
+                with st.spinner(f"🔍 Analysiere mit {model_name}..."):
+                    result = call_api(statements, model_id)
+                    
+                    if result['success']:
+                        st.session_state.analysis_data = result['data']
+                        st.session_state.summary = calculate_summary(result['data'])
+                        st.balloons()
+                        st.rerun()
+                    else:
+                        st.error(f"❌ Fehler: {result['error']}")
     
     # Preview
     if input_text:
-        with st.expander("👁️ Statements Preview"):
+        with st.expander("👁️ Statement Preview"):
             statements = parse_statements(input_text)
+            st.metric("Anzahl Statements", len(statements))
             for i, stmt in enumerate(statements, 1):
                 st.write(f"{i}. {stmt}")
     
-    # Analyze Button - FIX 1: Always enabled if text present
-    st.markdown("---")
-    col1, col2, col3 = st.columns([2, 1, 2])
-    
-    with col2:
-        # Button is now enabled as long as there's text
-        analyze_btn = st.button(
-            "🔍 Analyse starten",
-            type="primary",
-            use_container_width=True,
-            disabled=not bool(input_text and input_text.strip())  # Only disabled if truly empty
-        )
-    
-    if analyze_btn and input_text:
-        statements = parse_statements(input_text)
-        model_id = st.session_state.selected_model['modelID']
-        model_name = st.session_state.selected_model['modelName']
-        
-        with st.spinner(f"🔍 Analysiere mit {model_name}..."):
-            result = call_api(statements, model_id)
-            
-            if result['success']:
-                st.session_state.analysis_data = result['data']
-                st.session_state.summary = calculate_summary(result['data'])
-                st.balloons()
-                st.rerun()
-            else:
-                st.error(f"❌ Fehler: {result['error']}")
+    st.markdown('</div>', unsafe_allow_html=True)
 
-# RESULTS
 else:
+    # RESULTS MODE
     analysis_data = st.session_state.analysis_data
     summary = st.session_state.summary
     model_info = st.session_state.selected_model
     
-    st.success(f"✅ Analyse abgeschlossen mit {model_info['modelName']}!")
-    
     # Score Display
     st.markdown(f"""
-    <div class="score-display">
+    <div class="score-box">
         <div class="score-value">{summary['desinfo_score']}</div>
-        <div class="score-grade">Grade: {summary['grade']}</div>
+        <div class="score-grade">Grade {summary['grade']}</div>
         <div class="score-label">{summary['grade_label']}</div>
     </div>
     """, unsafe_allow_html=True)
     
-    st.markdown("---")
-    
-    # Categories
-    st.header("📊 Quantifizierung")
+    # Quantifizierung
+    st.markdown('<div class="content-box">', unsafe_allow_html=True)
+    st.markdown('<h2 class="section-header-dark">📊 Quantifizierung</h2>', unsafe_allow_html=True)
     
     cols = st.columns(5)
     categories = ['FALSCH', 'DELEGITIMIERUNG', 'VERZERRUNG', 'FRAME', 'WAHR']
@@ -691,86 +678,89 @@ else:
     for idx, cat in enumerate(categories):
         count = summary['category_counts'].get(cat, 0)
         percentage = (count / summary['total_statements'] * 100) if summary['total_statements'] > 0 else 0
-        color = get_category_color(cat)
+        hex_color, _ = get_category_color(cat)
         
         with cols[idx]:
             st.markdown(f"""
-            <div class="metric-card" style="background: {color};">
-                <div style="font-size: 2.5rem; font-weight: bold;">{count}</div>
-                <div style="font-size: 1rem; margin: 0.5rem 0;">{cat}</div>
-                <div style="font-size: 0.9rem;">{percentage:.0f}%</div>
+            <div class="metric-card" style="background: {hex_color};">
+                <div class="metric-value">{count}</div>
+                <div class="metric-label">{cat}</div>
+                <div class="metric-percent">{percentage:.0f}%</div>
             </div>
             """, unsafe_allow_html=True)
     
-    st.markdown("---")
+    st.markdown('</div>', unsafe_allow_html=True)
     
     # Detailed Results
-    st.header("📋 Detaillierte Ergebnisse")
+    st.markdown('<div class="content-box">', unsafe_allow_html=True)
+    st.markdown('<h2 class="section-header-dark">📋 Detaillierte Ergebnisse</h2>', unsafe_allow_html=True)
     
     for category in categories:
         cat_items = [item for item in analysis_data if item['kategorie'] == category]
         if not cat_items:
             continue
         
-        with st.expander(f"{category} ({len(cat_items)} Aussagen)"):
+        with st.expander(f"**{category}** ({len(cat_items)} Aussagen)", expanded=False):
             st.markdown(f"*{CATEGORY_DESCRIPTIONS[category]}*")
             st.markdown("---")
             
             for idx, item in enumerate(cat_items, 1):
+                hex_color, _ = get_category_color(category)
                 st.markdown(f"""
-                <div class="statement-card">
+                <div class="statement-card" style="border-left-color: {hex_color};">
                     <h4>{idx}. "{item['aussage']}"</h4>
                     <span class="category-badge badge-{category.lower()}">{category}</span>
-                    <span class="category-badge" style="background-color: #6c757d; color: white;">Punkte: {item['punkte']}</span>
+                    <span class="category-badge" style="background: #6c757d; color: white;">Punkte: {item['punkte']}</span>
                     <p style="margin-top: 1rem;"><strong>Begründung:</strong> {item['begründung']}</p>
                 </div>
                 """, unsafe_allow_html=True)
     
-    # Downloads
-    st.markdown("---")
-    st.header("📥 Report Download")
+    st.markdown('</div>', unsafe_allow_html=True)
     
-    col1, col2 = st.columns(2)
+    # Downloads
+    st.markdown('<div class="content-box">', unsafe_allow_html=True)
+    st.markdown('<h2 class="section-header-dark">📥 Report Download</h2>', unsafe_allow_html=True)
+    
+    col1, col2, col3 = st.columns([1, 1, 1])
     
     with col1:
-        st.subheader("📄 PDF Report")
-        if st.button("🔨 PDF generieren", key="gen_pdf", use_container_width=True):
+        if st.button("📄 PDF Report generieren", use_container_width=True):
             with st.spinner("Generiere PDF..."):
                 pdf_buffer = generate_pdf_report(analysis_data, summary, model_info)
                 st.download_button(
-                    label="📥 PDF herunterladen",
+                    label="⬇️ PDF herunterladen",
                     data=pdf_buffer,
-                    file_name=f"DESINFO_Report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf",
+                    file_name=f"DesInfo_Report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf",
                     mime="application/pdf",
                     use_container_width=True
                 )
     
     with col2:
-        st.subheader("📝 DOCX Report")
-        if st.button("🔨 DOCX generieren", key="gen_docx", use_container_width=True):
+        if st.button("📝 DOCX Report generieren", use_container_width=True):
             with st.spinner("Generiere DOCX..."):
                 docx_buffer = generate_docx_report(analysis_data, summary, model_info)
                 st.download_button(
-                    label="📥 DOCX herunterladen",
+                    label="⬇️ DOCX herunterladen",
                     data=docx_buffer,
-                    file_name=f"DESINFO_Report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.docx",
+                    file_name=f"DesInfo_Report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.docx",
                     mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
                     use_container_width=True
                 )
     
-    # New Analysis Button
-    st.markdown("---")
-    if st.button("🔄 Neue Analyse starten", use_container_width=True):
-        st.session_state.analysis_data = None
-        st.session_state.summary = None
-        st.session_state.input_text = ""
-        st.rerun()
+    with col3:
+        if st.button("🔄 Neue Analyse", use_container_width=True):
+            st.session_state.analysis_data = None
+            st.session_state.summary = None
+            st.session_state.input_text = ""
+            st.rerun()
+    
+    st.markdown('</div>', unsafe_allow_html=True)
 
 # Footer
 st.markdown("---")
 st.markdown("""
-<div style="text-align: center; color: #666; padding: 2rem 0;">
-    <p><strong>DESINFO Political Discourse Analyzer v2.0</strong></p>
-    <p>Powered by <a href="https://www.democracy-intelligence.de" target="_blank" style="color: #e94560;">Democracy Intelligence</a></p>
+<div style="text-align: center; color: white; padding: 2rem 0;">
+    <p style="font-size: 1.2rem; font-weight: 600;">Powered by <a href="https://www.democracy-intelligence.de" target="_blank" style="color: #ffd93d; text-decoration: none;">Democracy Intelligence</a></p>
+    <p style="font-size: 0.9rem; opacity: 0.8;">DESINFO Political Discourse Analyzer v2.1</p>
 </div>
 """, unsafe_allow_html=True)
