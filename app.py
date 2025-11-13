@@ -30,6 +30,9 @@ ANALYZE_ENDPOINT = f"{API_BASE_URL}/desInfo/generateReport"
 
 LOGO_URL = "https://uzimkjbynnadffyvsohi.supabase.co/storage/v1/object/public/bilder/di_logo_300.png"
 
+# Debug Mode
+DEBUG_MODE = False  # Set to True to see debug output
+
 # Kategorie Scoring
 CATEGORY_POINTS = {
     'FALSCH': 5,
@@ -57,7 +60,7 @@ CATEGORY_DESCRIPTIONS = {
 }
 
 # ============================================
-# PAGE CONFIG
+# PAGE CONFIG - Force dark theme
 # ============================================
 st.set_page_config(
     page_title="DESINFO Analyzer",
@@ -67,7 +70,7 @@ st.set_page_config(
 )
 
 # ============================================
-# CUSTOM CSS - FIXED FOR MAC/WINDOWS COMPATIBILITY
+# MINIMAL CSS - Let Streamlit theme handle colors
 # ============================================
 st.markdown("""
 <style>
@@ -75,61 +78,6 @@ st.markdown("""
     
     * {
         font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-    }
-    
-    /* Sidebar - READABLE WHITE TEXT */
-    [data-testid="stSidebar"] {
-        background: linear-gradient(180deg, #2c5f7d 0%, #1a3a4d 100%);
-        padding: 2rem 1rem;
-    }
-    
-    [data-testid="stSidebar"] * {
-        color: white !important;
-    }
-    
-    [data-testid="stSidebar"] .stMarkdown {
-        color: white !important;
-    }
-    
-    [data-testid="stSidebar"] h1, 
-    [data-testid="stSidebar"] h2, 
-    [data-testid="stSidebar"] h3,
-    [data-testid="stSidebar"] .stMarkdown h1,
-    [data-testid="stSidebar"] .stMarkdown h2,
-    [data-testid="stSidebar"] .stMarkdown h3 {
-        color: white !important;
-        font-weight: 600 !important;
-    }
-    
-    [data-testid="stSidebar"] p {
-        color: rgba(255, 255, 255, 0.95) !important;
-        font-size: 0.95rem !important;
-    }
-    
-    [data-testid="stSidebar"] .stSelectbox label,
-    [data-testid="stSidebar"] .stTextInput label,
-    [data-testid="stSidebar"] .stTextArea label {
-        color: white !important;
-        font-weight: 500 !important;
-    }
-    
-    [data-testid="stSidebar"] .stExpander {
-        border-color: rgba(255, 255, 255, 0.3) !important;
-    }
-    
-    [data-testid="stSidebar"] hr {
-        border-color: rgba(255, 255, 255, 0.3) !important;
-    }
-    
-    /* Main Container - Democracy Intelligence Colors */
-    .main {
-        background: linear-gradient(135deg, #2c5f7d 0%, #1a3a4d 100%);
-        padding: 2rem 1rem;
-    }
-    
-    .block-container {
-        max-width: 1400px;
-        padding: 0;
     }
     
     /* Logo */
@@ -143,11 +91,10 @@ st.markdown("""
         height: auto;
     }
     
-    /* Header */
+    /* Headers */
     .main-header {
         font-size: 3.5rem;
         font-weight: 800;
-        color: white;
         text-align: center;
         padding: 1rem 0 0.5rem 0;
         text-shadow: 0 2px 10px rgba(0,0,0,0.2);
@@ -155,113 +102,19 @@ st.markdown("""
     
     .subtitle {
         font-size: 1.3rem;
-        color: white;
         text-align: center;
         font-weight: 400;
         margin-bottom: 2rem;
         opacity: 0.95;
     }
     
-    /* Input Section - Transparent Background */
-    .input-section {
-        background: rgba(255, 255, 255, 0.05);
-        border-radius: 15px;
-        padding: 2rem;
-        margin: 2rem 0;
-        backdrop-filter: blur(10px);
-    }
-    
-    .input-title {
-        font-size: 1.8rem;
-        font-weight: 700;
-        color: white;
-        margin-bottom: 1rem;
-        text-align: center;
-    }
-    
-    .input-description {
-        color: rgba(255, 255, 255, 0.9);
-        text-align: center;
-        margin-bottom: 1.5rem;
-        font-size: 1.05rem;
-    }
-    
-    /* Text Area - FIXED FOR MAC/WINDOWS */
-    .stTextArea textarea,
-    [data-testid="stTextArea"] textarea,
-    div[data-baseweb="textarea"] textarea {
-        border: 2px solid rgba(255, 255, 255, 0.3) !important;
-        border-radius: 15px !important;
-        font-size: 1rem !important;
-        padding: 1rem !important;
-        background: rgba(255, 255, 255, 0.1) !important;
-        color: white !important;
-    }
-    
-    /* Focus state */
-    .stTextArea textarea:focus,
-    [data-testid="stTextArea"] textarea:focus,
-    div[data-baseweb="textarea"] textarea:focus {
-        background: rgba(255, 255, 255, 0.15) !important;
-        color: white !important;
-        border-color: rgba(255, 255, 255, 0.5) !important;
-        outline: none !important;
-    }
-    
-    /* Placeholder */
-    .stTextArea textarea::placeholder,
-    [data-testid="stTextArea"] textarea::placeholder {
-        color: rgba(255, 255, 255, 0.5) !important;
-    }
-    
-    /* Label */
-    .stTextArea label,
-    [data-testid="stTextArea"] label {
-        color: white !important;
-        font-weight: 600 !important;
-    }
-    
-    /* Results Container - White Background */
+    /* Results Container */
     .results-container {
         background: white;
         border-radius: 20px;
         padding: 2.5rem;
         margin: 2rem 0;
         box-shadow: 0 10px 40px rgba(0,0,0,0.3);
-    }
-    
-    /* Section Headers */
-    .section-title {
-        font-size: 2rem;
-        font-weight: 700;
-        color: #1a1a1a;
-        margin-bottom: 1.5rem;
-        text-align: center;
-    }
-    
-    /* Buttons - Democracy Intelligence Pink */
-    .stButton>button {
-        background: linear-gradient(135deg, #e91e8c 0%, #c21673 100%);
-        color: white;
-        border: none;
-        padding: 0.75rem 2rem;
-        font-size: 1.1rem;
-        font-weight: 700;
-        border-radius: 50px;
-        transition: all 0.3s;
-        width: 100%;
-    }
-    
-    .stButton>button:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 6px 20px rgba(233, 30, 140, 0.4);
-        background: linear-gradient(135deg, #ff2a9c 0%, #e91e8c 100%);
-    }
-    
-    .stButton>button:disabled {
-        background: rgba(255, 255, 255, 0.2);
-        color: rgba(255, 255, 255, 0.5);
-        cursor: not-allowed;
     }
     
     /* Score Box */
@@ -279,6 +132,7 @@ st.markdown("""
         font-size: 6rem;
         font-weight: 800;
         margin: 0;
+        color: white;
     }
     
     .score-grade {
@@ -291,6 +145,7 @@ st.markdown("""
     .score-label {
         font-size: 1.8rem;
         font-weight: 600;
+        color: white;
     }
     
     /* Metric Cards */
@@ -378,10 +233,30 @@ st.markdown("""
         border-radius: 8px;
     }
     
+    /* Section Title */
+    .section-title {
+        font-size: 2rem;
+        font-weight: 700;
+        color: #1a1a1a;
+        margin-bottom: 1.5rem;
+        text-align: center;
+    }
+    
     /* Hide Streamlit Elements */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     .stDeployButton {display:none;}
+    
+    /* Debug Box */
+    .debug-box {
+        background: #f0f0f0;
+        border: 2px solid #666;
+        border-radius: 8px;
+        padding: 1rem;
+        margin: 1rem 0;
+        font-family: monospace;
+        font-size: 0.85rem;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -389,17 +264,31 @@ st.markdown("""
 # HELPER FUNCTIONS
 # ============================================
 
+def debug_log(message):
+    """Print debug message if DEBUG_MODE is enabled"""
+    if DEBUG_MODE:
+        st.sidebar.markdown(f'<div class="debug-box">🐛 {message}</div>', unsafe_allow_html=True)
+
 @st.cache_data(ttl=300)
 def fetch_models():
     """Lädt verfügbare Models von API"""
     try:
+        debug_log(f"Fetching models from: {MODELS_ENDPOINT}")
         response = requests.get(MODELS_ENDPOINT, timeout=10)
+        debug_log(f"Response status: {response.status_code}")
+        
         if response.ok:
             data = response.json()
-            return [m for m in data.get('models', []) if m.get('valid', False)]
+            models = [m for m in data.get('models', []) if m.get('valid', False)]
+            debug_log(f"Found {len(models)} valid models")
+            return models
+        else:
+            debug_log(f"API Error: {response.status_code}")
+            return []
     except Exception as e:
+        debug_log(f"Exception: {str(e)}")
         st.error(f"⚠️ Fehler beim Laden der Models: {e}")
-    return []
+        return []
 
 def parse_statements(text: str) -> list:
     """Parse statements from text"""
@@ -663,7 +552,7 @@ def generate_docx_report(analysis_data: list, summary: dict, model_info: dict = 
     return buffer
 
 # ============================================
-# SESSION STATE - Initialize AFTER models
+# SESSION STATE - Simple initialization
 # ============================================
 if 'analysis_data' not in st.session_state:
     st.session_state.analysis_data = None
@@ -671,40 +560,58 @@ if 'summary' not in st.session_state:
     st.session_state.summary = None
 if 'input_text' not in st.session_state:
     st.session_state.input_text = ""
-# NOTE: selected_model is NOT initialized here - will be done after loading models
 
 # ============================================
-# SIDEBAR - FIXED MODEL SELECTION
+# LOAD MODELS FIRST
+# ============================================
+valid_models = fetch_models()
+
+# Initialize selected_model with FIRST model if available
+if 'selected_model' not in st.session_state:
+    if valid_models and len(valid_models) > 0:
+        st.session_state.selected_model = valid_models[0]
+        debug_log(f"Initialized with model: {valid_models[0]['modelName']}")
+    else:
+        st.session_state.selected_model = None
+        debug_log("No models available!")
+
+# ============================================
+# SIDEBAR
 # ============================================
 with st.sidebar:
-    st.markdown("# ⚙️ Einstellungen")
+    st.header("⚙️ Einstellungen")
     
-    # Load Models
-    valid_models = fetch_models()
-    
-    if valid_models:
-        st.markdown("### AI Model")
+    if valid_models and len(valid_models) > 0:
+        st.subheader("AI Model")
         
-        # FIXED: Initialize selected_model AFTER models are loaded
-        if 'selected_model' not in st.session_state or st.session_state.selected_model is None:
-            st.session_state.selected_model = valid_models[0]  # Set first model as default
+        # Create options dict
+        model_options = {}
+        for m in valid_models:
+            label = f"{m['modelName']} ({m['provider']})"
+            model_options[label] = m
         
-        model_options = {f"{m['modelName']} ({m['provider']})": m for m in valid_models}
+        # Get current selection
+        if st.session_state.selected_model:
+            current_label = f"{st.session_state.selected_model['modelName']} ({st.session_state.selected_model['provider']})"
+            try:
+                current_index = list(model_options.keys()).index(current_label)
+            except ValueError:
+                current_index = 0
+        else:
+            current_index = 0
         
-        # Find current selection index
-        current_model = st.session_state.selected_model
-        current_label = f"{current_model['modelName']} ({current_model['provider']})"
-        default_index = list(model_options.keys()).index(current_label) if current_label in model_options else 0
+        debug_log(f"Current index: {current_index}")
+        debug_log(f"Available options: {list(model_options.keys())}")
         
-        selected_model_label = st.selectbox(
+        # Selectbox
+        selected_label = st.selectbox(
             "Wähle ein Model:",
             options=list(model_options.keys()),
-            index=default_index,
-            key="model_selector"  # Unique key
+            index=current_index
         )
         
         # Update session state
-        st.session_state.selected_model = model_options[selected_model_label]
+        st.session_state.selected_model = model_options[selected_label]
         
         with st.expander("ℹ️ Model Details"):
             model = st.session_state.selected_model
@@ -713,20 +620,21 @@ with st.sidebar:
             st.write(f"**Provider:** {model['provider']}")
     else:
         st.error("⚠️ Keine Models verfügbar")
+        st.info("API-Verbindung prüfen")
     
-    st.markdown("---")
+    st.divider()
     
-    st.markdown("### 📚 Kategorien")
+    st.subheader("📚 Kategorien")
     st.markdown("""
-    - 🔴 **FALSCH** (5 Punkte)
-    - 🟠 **DELEGITIMIERUNG** (4 Punkte)
-    - 🟡 **VERZERRUNG** (3 Punkte)
-    - 🟢 **FRAME** (1 Punkt)
-    - 🔵 **WAHR** (0 Punkte)
+    🔴 **FALSCH** (5 Punkte)  
+    🟠 **DELEGITIMIERUNG** (4 Punkte)  
+    🟡 **VERZERRUNG** (3 Punkte)  
+    🟢 **FRAME** (1 Punkt)  
+    🔵 **WAHR** (0 Punkte)
     """)
     
     if st.session_state.analysis_data is not None:
-        st.markdown("---")
+        st.divider()
         if st.button("🔄 Neue Analyse", use_container_width=True):
             st.session_state.analysis_data = None
             st.session_state.summary = None
@@ -737,47 +645,48 @@ with st.sidebar:
 # MAIN APP
 # ============================================
 
-if not valid_models:
+if not valid_models or len(valid_models) == 0:
     st.error("⚠️ Keine Models verfügbar. Bitte API-Verbindung prüfen.")
+    st.info(f"API Endpoint: {MODELS_ENDPOINT}")
     st.stop()
 
 # Logo
 st.markdown(f'<div class="logo-container"><img src="{LOGO_URL}" alt="Democracy Intelligence"></div>', unsafe_allow_html=True)
 
 # Header
-st.markdown('<div class="main-header">DESINFO</div>', unsafe_allow_html=True)
+st.markdown('<div class="main-header">🔍 DESINFO</div>', unsafe_allow_html=True)
 st.markdown('<div class="subtitle">Demokratie-Intelligenz für politische Kommunikation</div>', unsafe_allow_html=True)
 
 # Main Content
 if st.session_state.analysis_data is None:
     # INPUT MODE
-    st.markdown('<div class="input-section">', unsafe_allow_html=True)
-    st.markdown('<div class="input-title">📝 Analyse starten</div>', unsafe_allow_html=True)
-    st.markdown('<div class="input-description">Geben Sie politische Aussagen ein (eine pro Zeile oder mit | getrennt)</div>', unsafe_allow_html=True)
+    st.markdown("### 📝 Analyse starten")
+    st.info("Geben Sie politische Aussagen ein (eine pro Zeile oder mit | getrennt)")
     
-    # Form with always-visible button
-    with st.form(key="analysis_form"):
-        input_text = st.text_area(
-            "Text zur Analyse:",
-            height=350,
-            value=st.session_state.input_text,
-            placeholder="",
-            help="Geben Sie hier politische Aussagen ein."
+    # Use st.text_area directly - let Streamlit theme handle it
+    input_text = st.text_area(
+        "Text zur Analyse:",
+        height=350,
+        value=st.session_state.input_text,
+        placeholder="",
+        help="Geben Sie hier politische Aussagen ein.",
+        key="main_textarea"
+    )
+    
+    st.session_state.input_text = input_text
+    
+    # Button
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col2:
+        analyze_button = st.button(
+            "🚀 Analyse starten",
+            use_container_width=True,
+            type="primary",
+            disabled=(not input_text or len(input_text.strip()) < 10)
         )
-        
-        st.session_state.input_text = input_text
-        
-        # Button ALWAYS visible
-        col1, col2, col3 = st.columns([1, 2, 1])
-        with col2:
-            submit_button = st.form_submit_button(
-                "🚀 Analyse starten",
-                use_container_width=True,
-                type="primary"
-            )
     
-    # Handle submission
-    if submit_button:
+    # Handle analysis
+    if analyze_button:
         if not input_text or len(input_text.strip()) < 10:
             st.warning("⚠️ Bitte geben Sie mindestens 10 Zeichen Text ein.")
         else:
@@ -799,9 +708,7 @@ if st.session_state.analysis_data is None:
     # Preview
     if input_text:
         statements = parse_statements(input_text)
-        st.markdown(f'<div style="color: white; text-align: center; margin-top: 1rem;">📊 <strong>{len(statements)} Aussagen</strong> werden analysiert</div>', unsafe_allow_html=True)
-    
-    st.markdown('</div>', unsafe_allow_html=True)
+        st.info(f"📊 **{len(statements)} Aussagen** werden analysiert")
 
 else:
     # RESULTS MODE
@@ -851,14 +758,10 @@ else:
         if not cat_items:
             continue
         
-        # Category Header
         hex_color, _ = get_category_color(category)
         st.markdown(f'<div class="category-header" style="border-bottom-color: {hex_color};">{category} ({len(cat_items)} Aussagen)</div>', unsafe_allow_html=True)
-        
-        # Category Description
         st.markdown(f'<div class="category-description">{CATEGORY_DESCRIPTIONS[category]}</div>', unsafe_allow_html=True)
         
-        # Statements
         for idx, item in enumerate(cat_items, 1):
             st.markdown(f"""
             <div class="statement-card" style="border-left-color: {hex_color};">
@@ -903,12 +806,12 @@ else:
     st.markdown('</div>', unsafe_allow_html=True)
 
 # Footer
-st.markdown("---")
-st.markdown(f"""
-<div style="text-align: center; color: white; padding: 2rem 0;">
+st.divider()
+st.markdown("""
+<div style="text-align: center; padding: 2rem 0;">
     <p style="font-size: 1.2rem; font-weight: 600;">
         Powered by <a href="https://www.democracy-intelligence.de" target="_blank" style="color: #e91e8c; text-decoration: none;">Democracy Intelligence</a>
     </p>
-    <p style="font-size: 0.9rem; opacity: 0.8;">DESINFO v3.0 Final - Mac/Windows Compatible</p>
+    <p style="font-size: 0.9rem; opacity: 0.8;">DESINFO v3.1 Robust - Theme-Based</p>
 </div>
 """, unsafe_allow_html=True)
