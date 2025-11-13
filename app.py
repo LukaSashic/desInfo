@@ -304,7 +304,7 @@ def call_api(statements: list, model_id: int) -> dict:
     params = {"modelID": model_id, "text": text_param}
     
     try:
-        response = requests.get(ANALYZE_ENDPOINT, params=params, timeout=120)
+        response = requests.get(ANALYZE_ENDPOINT, params=params, timeout=300)
         response.raise_for_status()
         data = response.json()
         
